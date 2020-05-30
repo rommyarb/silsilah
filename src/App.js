@@ -1,9 +1,12 @@
 import React from 'react';
-import logo from './logo.svg';
+// import logo from "./logo.svg";
 import {v4 as uuidv4} from 'uuid';
 import './App.css';
+import Modal from './components/Modal';
+import ExportPDF from 'react-to-pdf';
+import {translate} from 'react-i18next';
 
-const prefix = '/silsilah';
+const prefix = process.env.REACT_APP_MODE === 'prod' ? '/silsilah' : '/';
 
 // Basic structure
 const tree = [
@@ -71,10 +74,12 @@ const tree = [
   },
 ];
 
-class Node extends React.Component {
+class NodeLegacy extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {brand: 'Ford'};
+    this.state = {
+      brand: 'Ford',
+    };
   }
   componentDidMount() {
     let nodes = this.props.tree.filter(data => {
@@ -130,6 +135,7 @@ class Node extends React.Component {
     });
   }
   render() {
+    const {t, i18n} = this.props;
     return (
       <div>
         {this.state.nodes &&
@@ -139,9 +145,9 @@ class Node extends React.Component {
                 id={this.props.root ? 'root-family' : ''}
                 className="family"
                 key={key}>
-                {key == this.state.nodes.length - 1 &&
-                  this.state.nodes.length > 1 &&
-                  node.exs && (
+                {this.state.nodes.length > 1 &&
+                  node.exs &&
+                  node.exs.length > 0 && (
                     <div className={'sibling-line-right-with-exs'}></div>
                   )}
                 {node.divorcedRemarried &&
@@ -152,7 +158,7 @@ class Node extends React.Component {
                       <div style={{display: 'inline-block'}} key={k}>
                         {this.props.tree
                           .filter(data => {
-                            return data.id == ex.id;
+                            return data.id === ex.id;
                           })
                           .map((n, ek) => {
                             return (
@@ -169,9 +175,11 @@ class Node extends React.Component {
                                   }
                                   id={n.id}>
                                   {n.name}
-                                  {n.img && <img width="100" src={n.img} />}
+                                  {n.img && (
+                                    <img width="100" src={n.img} alt="" />
+                                  )}
                                 </div>
-                                {key == this.state.nodes.length - 1 &&
+                                {key === this.state.nodes.length - 1 &&
                                   this.state.nodes.length > 1 &&
                                   node.exs &&
                                   node.exs.length > 0 && (
@@ -194,10 +202,10 @@ class Node extends React.Component {
                 <div
                   id={this.props.root ? 'root-family-sub' : ''}
                   className="family">
-                  {key == 0 && this.state.nodes.length > 1 && (
+                  {key === 0 && this.state.nodes.length > 1 && (
                     <div className={'sibling-line-left'}></div>
                   )}
-                  {key == this.state.nodes.length - 1 &&
+                  {key === this.state.nodes.length - 1 &&
                     this.state.nodes.length > 1 && (
                       <div
                         className={
@@ -205,7 +213,7 @@ class Node extends React.Component {
                           (node.spouse ? ' sibling-line-right-with-spouse' : '')
                         }></div>
                     )}
-                  {!(key == 0 || key == this.state.nodes.length - 1) &&
+                  {!(key === 0 || key === this.state.nodes.length - 1) &&
                     this.state.nodes.length > 1 && (
                       <div className={'sibling-line-center'}></div>
                     )}
@@ -226,16 +234,24 @@ class Node extends React.Component {
                     {!this.props.root && (
                       <div className="derivative-line-2"></div>
                     )}
-                    {key == 0 && this.state.nodes.length > 1 && node.spouse && (
-                      <div className="sibling-line-left-node"></div>
-                    )}
-                    {key == this.state.nodes.length - 1 &&
+                    {key === 0 &&
+                      this.state.nodes.length > 1 &&
+                      node.spouse && (
+                        <div className="sibling-line-left-node"></div>
+                      )}
+                    {key === this.state.nodes.length - 1 &&
                       this.state.nodes.length > 1 &&
                       node.spouse && (
                         <div className={'sibling-line-right-node'}></div>
                       )}
+                    {!this.props.root &&
+                      key === 0 &&
+                      this.state.nodes.length === 1 &&
+                      node.spouse && (
+                        <div className={'sibling-line-left-node'}></div>
+                      )}
                     {node.name}
-                    {node.img && <img width="100" src={node.img} />}
+                    {node.img && <img width="100" src={node.img} alt="" />}
                   </div>
                   {node.spouse && !node.divorced && (
                     <div className="marital-line"></div>
@@ -246,7 +262,7 @@ class Node extends React.Component {
                   {node.spouse &&
                     this.props.tree
                       .filter(data => {
-                        return data.id == node.spouse;
+                        return data.id === node.spouse;
                       })
                       .map((n, k) => {
                         return (
@@ -284,6 +300,8 @@ class Node extends React.Component {
   }
 }
 
+const Node = translate('translations')(NodeLegacy);
+
 class App extends React.Component {
   constructor(props) {
     super(props);
@@ -292,17 +310,17 @@ class App extends React.Component {
       tree: JSON.parse(window.localStorage.getItem('tree')) || tree,
       isNew: window.localStorage.getItem('tree') ? false : true,
       scale: 1.0,
+      showModalExport: false,
     };
+    this.pdfRef = React.createRef();
   }
   componentDidMount = () => {
-    let familyTree;
+    // let familyTree;
     this.resizeTreeWidth();
     if (this.state.isNew) {
       setTimeout(() => {
         if (!window.localStorage.getItem('isReset')) {
-          alert(
-            'It seems that you have not created any tree yet. You can continue to edit existing basic tree structure or import your existing JSON file.',
-          );
+          alert(this.props.t('welcomeAlert'));
         }
         window.localStorage.removeItem('isReset');
       }, 500);
@@ -319,6 +337,11 @@ class App extends React.Component {
             'width',
             document.getElementById('root-family').offsetWidth + 100 + 'px',
           );
+        document.getElementById('center').scrollIntoView({
+          behaviour: 'smooth',
+          inline: 'center',
+          block: 'center',
+        });
       }
     }, 100);
   };
@@ -328,11 +351,7 @@ class App extends React.Component {
   };
 
   reset = () => {
-    if (
-      window.confirm(
-        'You are attempting to reset the tree to the basic tree structure. Please save your work befork dong this. Continue?',
-      )
-    ) {
+    if (window.confirm(this.props.t('resetConfirm'))) {
       window.localStorage.removeItem('tree');
       window.localStorage.setItem('isReset', 'true');
       window.location = prefix;
@@ -410,11 +429,45 @@ class App extends React.Component {
     }
   };
 
+  initExport = () => {
+    this.setState({
+      showModalExport: true,
+    });
+  };
+
   render() {
+    const {t, i18n} = this.props;
+    const pdfWidth = window.document.getElementById('main-wrapper')
+      ? parseInt(window.document.getElementById('main-wrapper').clientWidth) *
+        (75 / 100)
+      : 0;
+    const pdfHeight = window.document.getElementById('main-wrapper')
+      ? parseInt(window.document.getElementById('main-wrapper').clientHeight)
+      : 0;
     return (
       <div className="App">
+        <div className="i18n">
+          <span
+            className={'i18n-options'}
+            onClick={() => {
+              i18n.changeLanguage('en');
+            }}>
+            English
+          </span>
+          &nbsp;/&nbsp;
+          <span
+            className={'i18n-options'}
+            onClick={() => {
+              i18n.changeLanguage('id');
+            }}>
+            Bahasa Indonesia
+          </span>
+        </div>
         <div className="header">
-          <div style={{height: 23}}>&nbsp;</div>
+          <div
+            style={{height: 27, color: '#a1a1a1', fontSize: 14, paddingTop: 3}}>
+            Ojo nganti kepatèn obor
+          </div>
           <div>
             <div
               className={
@@ -431,7 +484,7 @@ class App extends React.Component {
                 );
                 this.setState({currentTab: 'list'});
               }}>
-              List
+              {t('List')}
             </div>
             <div
               className={
@@ -444,61 +497,72 @@ class App extends React.Component {
                 if (this.state.currentTab === 'tree') return;
                 window.location = prefix;
               }}>
-              Tree
+              {t('Tree')}
             </div>
           </div>
-            <div className="tools">
-              <button onClick={this.import}>Import</button>&nbsp;&nbsp;
-              <button onClick={this.export}>Export</button>&nbsp;&nbsp;
-              <button onClick={this.reset}>Reset</button>&nbsp;&nbsp;
-              {this.state.currentTab === 'tree' &&
-              <div style={{display:'inline-block', color:'grey'}}>
-              <button onClick={this.zoomIn}>Zoom in</button>&nbsp;&nbsp;
-              <button onClick={this.zoomOut}>Zoom out</button>
-              {/* Legenda*/}
-              <div
-                style={{
-                  marginLeft: 10,
-                  width: 15,
-                  height: 3,
-                  background: 'blue',
-                  display: 'inline-block',
-                }}></div>
-              <span style={{fontSize: 12, paddingLeft: 5}}>
-                Original derivatives
-              </span>
-              <div
-                style={{
-                  marginLeft: 10,
-                  width: 15,
-                  height: 3,
-                  background: 'green',
-                  display: 'inline-block',
-                }}></div>
-              <span style={{fontSize: 12, paddingLeft: 5}}>Outsider</span>
-              <div
-                style={{
-                  marginLeft: 10,
-                  width: 15,
-                  height: 3,
-                  background: 'red',
-                  display: 'inline-block',
-                }}></div>
-              <span style={{fontSize: 12, paddingLeft: 5}}>Divorced</span>
-              <div
-                style={{
-                  verticalAlign:'bottom',
-                  marginBottom:2,
-                  marginLeft: 10,
-                  width: 15,
-                  height: 15,
-                  background: 'grey',
-                  display: 'inline-block',
-                }}></div>
-              <span style={{fontSize: 12, paddingLeft: 5}}>Deceased</span>
+          <div className="tools">
+            <button onClick={this.import}>{t('Import')}</button>&nbsp;&nbsp;
+            <button onClick={this.initExport}>{t('Export')}</button>&nbsp;&nbsp;
+            <button onClick={this.reset}>{t('Reset')}</button>&nbsp;&nbsp;
+            {this.state.currentTab === 'tree' && (
+              <div style={{display: 'inline-block', color: 'grey'}}>
+                <button onClick={this.zoomIn}>{t('Zoom in')}</button>
+                &nbsp;&nbsp;
+                <button onClick={this.zoomOut}>{t('Zoom out')}</button>
+                {/* Legenda*/}
               </div>
-              }
-            </div>
+            )}
+            {this.state.currentTab === 'tree' && (
+              <div style={{display: 'inline-block', color: 'grey'}}>
+                <div
+                  style={{
+                    marginLeft: 10,
+                    width: 15,
+                    height: 3,
+                    background: 'blue',
+                    display: 'inline-block',
+                  }}></div>
+                <span style={{fontSize: 12, paddingLeft: 5}}>
+                  {t('Original derivatives')}
+                </span>
+                <div
+                  style={{
+                    marginLeft: 10,
+                    width: 15,
+                    height: 3,
+                    background: 'green',
+                    display: 'inline-block',
+                  }}></div>
+                <span style={{fontSize: 12, paddingLeft: 5}}>
+                  {t('Outsider')}
+                </span>
+                <div
+                  style={{
+                    marginLeft: 10,
+                    width: 15,
+                    height: 3,
+                    background: 'red',
+                    display: 'inline-block',
+                  }}></div>
+                <span style={{fontSize: 12, paddingLeft: 5}}>
+                  {t('Divorced')}
+                </span>
+                <div
+                  style={{
+                    verticalAlign: 'bottom',
+                    marginBottom: 2,
+                    marginLeft: 10,
+                    width: 15,
+                    height: 15,
+                    background: 'grey',
+                    display: 'inline-block',
+                  }}></div>
+                <span style={{fontSize: 12, paddingLeft: 5}}>
+                  {t('Deceased')}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
         {/* List */}
         {this.state.currentTab === 'list' && (
@@ -529,11 +593,11 @@ class App extends React.Component {
                         });
                       });
                     }}>
-                    Add
+                    {t('Add')}
                   </div>
                 </div>
                 <input
-                  placeholder="Search..."
+                  placeholder={t('Search')}
                   className="search-box"
                   type="text"
                   onChange={this.onSearchChange}
@@ -602,7 +666,8 @@ class App extends React.Component {
           <div className="family-tree">
             {/* Family tree */}
             <div className="dragscroll">
-              <div id="main-wrapper">
+              <div id="main-wrapper" ref={this.pdfRef}>
+                <div style={{width: 0, margin: '0 auto'}} id="center"></div>
                 <Node
                   tree={this.state.tree}
                   parents={[this.state.tree[0].id]}
@@ -623,21 +688,52 @@ class App extends React.Component {
                   onClick={() => {
                     this.setState({modal: false, node: {}});
                   }}>
-                  &#10060;{' '}
+                  <span role="img" aria-label="">
+                    &#10060;{' '}
+                  </span>
                 </div>
               </div>
               <Form tree={this.state.tree} node={this.state.node} />
             </div>
           </div>
         )}
+        <Modal
+          show={this.state.showModalExport}
+          handleClose={() => {
+            this.setState({showModalExport: false});
+          }}
+          content={
+            <div>
+              <h4>{t('Export')}</h4>
+              <button onClick={this.export}>{t('Export to JSON')}</button>
+              &nbsp;
+              <ExportPDF
+                targetRef={this.pdfRef}
+                options={{
+                  orientation: 'landscapce',
+                  unit: 'px',
+                  format: [pdfWidth, pdfHeight],
+                }}
+                filename={
+                  'lineage-' +
+                  new Date().toISOString().replace(/:/g, '-') +
+                  '.pdf'
+                }>
+                {({toPdf}) => (
+                  <button onClick={toPdf}>{t('Export to PDF')}</button>
+                )}
+              </ExportPDF>
+            </div>
+          }
+        />
       </div>
     );
   }
 }
 
-export default App;
+export default translate('translations')(App);
 
-class Form extends React.Component {
+class FormLegacy extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -692,6 +788,13 @@ class Form extends React.Component {
   };
 
   remove = () => {
+    if (
+      !window.confirm(
+        this.props.t('Are you sure that you want to remove this node?'),
+      )
+    ) {
+      return;
+    }
     this.setState({search: null});
     let tree = this.props.tree;
     for (let i in tree) {
@@ -759,22 +862,16 @@ class Form extends React.Component {
     this.setState({search: e.target.value});
   };
   render() {
+    const {t, i18n} = this.props;
     return (
       <div>
         {this.state.scene === 'selectParent' && (
           <div>
-            <div
-              className="close"
-              onClick={() => {
-                this.setState({scene: 'form'});
-              }}>
-              &#10060;{' '}
-            </div>
             <div className="select-for-label">
-              Select parent for {this.state.name}
+              {t('Select parent for')} {this.state.name}
             </div>
             <input
-              placeholder="Search..."
+              placeholder={t('Search')}
               className="search-box"
               type="text"
               onChange={this.onSearchChange}
@@ -842,18 +939,11 @@ class Form extends React.Component {
         )}
         {this.state.scene === 'selectSpouse' && (
           <div>
-            <div
-              className="close"
-              onClick={() => {
-                this.setState({scene: 'form'});
-              }}>
-              &#10060;{' '}
-            </div>
             <div className="select-for-label">
-              Select spouse for {this.state.name}
+              {t('Select spouse for')} {this.state.name}
             </div>
             <input
-              placeholder="Search..."
+              placeholder={t('Search')}
               className="search-box"
               type="text"
               onChange={this.onSearchChange}
@@ -909,18 +999,11 @@ class Form extends React.Component {
         )}
         {this.state.scene === 'selectEx' && (
           <div>
-            <div
-              className="close"
-              onClick={() => {
-                this.setState({scene: 'form'});
-              }}>
-              &#10060;{' '}
-            </div>
             <div className="select-for-label">
-              Select ex for {this.state.name}
+              {t('Select ex for')} {this.state.name}
             </div>
             <input
-              placeholder="Search..."
+              placeholder={t('Search')}
               className="search-box"
               type="text"
               onChange={this.onSearchChange}
@@ -977,10 +1060,10 @@ class Form extends React.Component {
         {this.state.scene === 'form' && (
           <div>
             <div className="family-list-form">
-              <div className="family-list-form-label">Name</div>
+              <div className="family-list-form-label">{t('Name')}</div>
               <input
                 name="name"
-                placeholder="Name"
+                placeholder={t('Name')}
                 className="family-list-form-input"
                 type="text"
                 value={this.state.name}
@@ -988,10 +1071,10 @@ class Form extends React.Component {
               />
             </div>
             <div className="family-list-form">
-              <div className="family-list-form-label">Full name</div>
+              <div className="family-list-form-label">{t('Full name')}</div>
               <input
                 name="fullName"
-                placeholder="Full name"
+                placeholder={t('Full name')}
                 className="family-list-form-input"
                 type="text"
                 value={this.state.fullName}
@@ -999,10 +1082,10 @@ class Form extends React.Component {
               />
             </div>
             <div className="family-list-form">
-              <div className="family-list-form-label">Birth place</div>
+              <div className="family-list-form-label">{t('Birth place')}</div>
               <input
                 name="birthPlace"
-                placeholder="Birth place"
+                placeholder={t('Birth place')}
                 className="family-list-form-input"
                 type="text"
                 value={this.state.birthPlace}
@@ -1010,10 +1093,10 @@ class Form extends React.Component {
               />
             </div>
             <div className="family-list-form">
-              <div className="family-list-form-label">Birth date</div>
+              <div className="family-list-form-label">{t('Birth date')}</div>
               <input
                 name="birthDate"
-                placeholder="Birth date"
+                placeholder={t('Birth place')}
                 className="family-list-form-input"
                 type="text"
                 value={this.state.birthDate}
@@ -1021,10 +1104,10 @@ class Form extends React.Component {
               />
             </div>
             <div className="family-list-form">
-              <div className="family-list-form-label">City</div>
+              <div className="family-list-form-label">{t('City')}</div>
               <input
                 name="city"
-                placeholder="City"
+                placeholder={t('City')}
                 className="family-list-form-input"
                 type="text"
                 value={this.state.city}
@@ -1032,10 +1115,10 @@ class Form extends React.Component {
               />
             </div>
             <div className="family-list-form">
-              <div className="family-list-form-label">Contact</div>
+              <div className="family-list-form-label">{t('Contact')}</div>
               <input
                 name="contact"
-                placeholder="Contact"
+                placeholder={t('Contact')}
                 className="family-list-form-input"
                 type="text"
                 value={this.state.contact}
@@ -1043,7 +1126,7 @@ class Form extends React.Component {
               />
             </div>
             <div className="family-list-form">
-              <div className="family-list-form-label">Gender</div>
+              <div className="family-list-form-label">{t('Gender')}</div>
               <div className="family-list-form-free-input">
                 <span
                   className={
@@ -1053,7 +1136,7 @@ class Form extends React.Component {
                   onClick={() => {
                     this.setState({gender: 'male'});
                   }}>
-                  Male
+                  {t('Male')}
                 </span>
                 <span
                   className={
@@ -1063,7 +1146,7 @@ class Form extends React.Component {
                   onClick={() => {
                     this.setState({gender: 'female'});
                   }}>
-                  Female
+                  {t('Female')}
                 </span>
                 <span
                   className={
@@ -1073,7 +1156,7 @@ class Form extends React.Component {
                   onClick={() => {
                     this.setState({gender: 'other'});
                   }}>
-                  Other
+                  {t('Other')}
                 </span>
               </div>
             </div>
@@ -1088,7 +1171,7 @@ class Form extends React.Component {
                   onClick={() => {
                     this.setState({status: 'alive'});
                   }}>
-                  Alive
+                  {t('Alive')}
                 </span>
                 <span
                   className={
@@ -1098,7 +1181,7 @@ class Form extends React.Component {
                   onClick={() => {
                     this.setState({status: 'deceased'});
                   }}>
-                  Deceased
+                  {t('Deceased')}
                 </span>
               </div>
             </div>
@@ -1111,7 +1194,7 @@ class Form extends React.Component {
                 this.state.parents[0] === '0')
             ) && (
               <div className="family-list-form">
-                <div className="family-list-form-label">1st Parent</div>
+                <div className="family-list-form-label">{t('1st Parent')}</div>
                 <div className="family-list-form-free-input">
                   <span
                     className={
@@ -1140,7 +1223,7 @@ class Form extends React.Component {
                       this.state.parents &&
                       this.state.parents[0] &&
                       this.state.firstParent
-                    ) && 'Select'}
+                    ) && t('Select')}
                   </span>
                   {this.state.parents &&
                     this.state.parents[0] &&
@@ -1184,7 +1267,7 @@ class Form extends React.Component {
                 this.state.parents[0] === '0')
             ) && (
               <div className="family-list-form">
-                <div className="family-list-form-label">2nd Parent</div>
+                <div className="family-list-form-label">{t('2nd Parent')}</div>
                 <div className="family-list-form-free-input">
                   <span
                     className={
@@ -1213,7 +1296,7 @@ class Form extends React.Component {
                       this.state.parents &&
                       this.state.parents[1] &&
                       this.state.secondParent
-                    ) && 'Select'}
+                    ) && t('Select')}
                   </span>
                   {this.state.parents &&
                     this.state.parents[1] &&
@@ -1234,7 +1317,7 @@ class Form extends React.Component {
               </div>
             )}
             <div className="family-list-form">
-              <div className="family-list-form-label">Spouse</div>
+              <div className="family-list-form-label">{t('Spouse')}</div>
               <div className="family-list-form-free-input">
                 <span
                   className={
@@ -1252,7 +1335,7 @@ class Form extends React.Component {
                   }}>
                   {this.state.spouseName}
                   {!(this.state.spouse && this.state.spouse.length > 0) &&
-                    'Select'}
+                    t('Select')}
                 </span>
                 {this.state.spouse && this.state.spouse && (
                   <div
@@ -1269,7 +1352,7 @@ class Form extends React.Component {
               </div>
             </div>
             <div className="family-list-form">
-              <div className="family-list-form-label">Ex</div>
+              <div className="family-list-form-label">{t('Exs')}</div>
               <div className="family-list-form-free-input">
                 <span
                   className={
@@ -1289,7 +1372,7 @@ class Form extends React.Component {
                   {!(
                     (this.state.ex && this.state.exs.length > 0) ||
                     (this.state.exName && this.state.exName.length > 0)
-                  ) && 'Select'}
+                  ) && t('Select')}
                 </span>
                 {this.state.exs && this.state.exs.length > 0 && (
                   <div
@@ -1314,14 +1397,14 @@ class Form extends React.Component {
                     onClick={() => {
                       this.remove(this.state.id);
                     }}>
-                    Remove
+                    {t('Remove')}
                   </div>
                   <div
                     className="button"
                     onClick={() => {
                       this.save();
                     }}>
-                    Save
+                    {t('Save')}
                   </div>
                 </div>
               )}
@@ -1332,7 +1415,7 @@ class Form extends React.Component {
                     onClick={() => {
                       this.add();
                     }}>
-                    Add
+                    {t('Add')}
                   </div>
                 </div>
               )}
@@ -1343,3 +1426,5 @@ class Form extends React.Component {
     );
   }
 }
+
+const Form = translate('translations')(FormLegacy);

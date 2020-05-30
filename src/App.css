@@ -62,10 +62,11 @@ body {
 
 
 #main-wrapper {
-  margin-top:100px;
+  margin-top:10vh;
   width:10000000000000px;
   transform:scale(1);
-  margin-bottom:100px;
+  padding-top:100px;
+  margin-bottom:50vh;
 }
 
 .family-list {
@@ -85,7 +86,7 @@ body {
   cursor : -webkit-grab;
 }
 .header {
-  z-index:998;
+  z-index:997;
   background:grey;
   color:white;
   margin-bottom:50px;
@@ -94,12 +95,12 @@ body {
   text-align:center;
   top:0;
   left:0;
-  height:50px;
+  height:57px;
   padding-top:5px;
 }
 .main-menu-item-selected {
   background:lightgrey !important;
-  color:black;
+  color:grey;
 }
 .main-menu-item:hover {
   color:grey !important;
@@ -134,7 +135,7 @@ body {
 
 .family-list-form-label {
   color:grey;
-  width:100px;
+  width:110px;
   display:inline-block; 
   text-align:right;
   padding-right:15px;
@@ -172,7 +173,7 @@ body {
   text-align:left;
   vertical-align:top;
   display:inline-block;
-  width:330px;
+  width:350px;
   background:lightgrey;
   margin-left:15px;
   padding-bottom:20px;
@@ -219,7 +220,7 @@ body {
 
 .tools {
   background:lightgrey;
-  margin-top:55px;
+  margin-top:62px;
   margin-bottom:50px;
   position:fixed;
   width:100vw;
@@ -234,9 +235,9 @@ body {
 }
 
 .family {
+  border:0px solid orange; /* For debugging purpose*/
   display:inline-block;
   vertical-align:top;
-  border:0px solid orange;
   border-radius:5px;
   padding-right:10px;
   padding-left:10px;
@@ -247,7 +248,7 @@ body {
   display:block;
   background:blue;
   width:0px;
-  border: 1px solid blue;
+  border-left: 2px solid blue;
   height:30px;
   margin:0 auto;
 }
@@ -255,7 +256,7 @@ body {
 .derivative-line-ex {
   display:block;
   width:0px;
-  border: 1px solid blue;
+  border-left: 2px solid blue;
   height:30px;
   margin:0 auto;
 margin-right:30%;
@@ -263,19 +264,19 @@ margin-right:30%;
 
 .derivative-line-2 {
   display:block;
-  position:absolute;
+  float:left;
   width:0px;
-  border: 1px solid blue;
+  border-left: 2px solid blue;
   height:20px;
   margin-top:-32px;
-  margin-left:50px;
+  margin-left:49px;
 }
 
 .sibling-line {
   display:block;
   width:calc(100% - 160px);
   height:0px;
-  border: 1px solid blue;
+  border-top: 2px solid blue;
   margin:0 auto;
 }
 
@@ -286,17 +287,17 @@ margin-right:30%;
   margin-right:-21px;
   margin-top:-20px;
   height:0px;
-  border: 1px solid blue;
+  border-top: 2px solid blue;
 }
 
 .sibling-line-left-node {
   display:block;
-  position:absolute;
-  width:70px;
+  float:left;
+  width:72px;
   height:0px;
-  border: 1px solid blue;
+  border-top: 2px solid blue;
   margin-top:-32px;
-  margin-left:50px;
+  margin-left:51px;
 }
 
 .sibling-line-right {
@@ -306,7 +307,7 @@ margin-right:30%;
   margin-left:-21px;
   margin-top:-20px;
   height:0px;
-  border: 1px solid blue;
+  border-top: 2px solid blue;
 }
 
 .sibling-line-right-with-exs {
@@ -316,21 +317,21 @@ margin-right:30%;
   margin-left:-100px;
   margin-top:-10px;
   height:0px;
-  border: 1px solid blue;
+  border-top: 2px solid blue;
 }
 
 .sibling-line-right-with-spouse {
-  border: 1px solid blue !important;
+  border-top: 2px solid blue !important;
   width:calc(50% - 70px) !important;
   margin-right:21px !important;
 }
 
 .sibling-line-right-node {
   display:block;
-  position:absolute;
+  float:left;
   width:50px;
   height:0px;
-  border: 1px solid blue;
+  border-top: 2px solid blue;
   margin-top:-32px;
   margin-right:50px;
 }
@@ -343,7 +344,7 @@ margin-right:30%;
   margin-top:-30px;
   margin-bottom:30px;
   height:0px;
-  border: 1px solid red;
+  border-top: 2px solid red;
 }
 
 .sibling-line-center {
@@ -353,7 +354,7 @@ margin-right:30%;
   margin-left:-20px;
   margin-bottom:20px;
   height:0px;
-  border: 1px solid blue;
+  border-top: 2px solid blue;
 }
 
 .radio {
@@ -379,14 +380,14 @@ margin-right:30%;
 .marital-line {
   width:20px;
   height:0px;
-  border: 1px solid grey;
+  border-top: 2px solid grey;
   display:inline-block;
 }
 
 .marital-line-divorced {
   width:20px;
   height:0px;
-  border: 1px solid red;
+  border-top: 2px solid red;
   display:inline-block;
 }
 
@@ -394,7 +395,7 @@ margin-right:30%;
 .modal {
   display: block;
   position: fixed;
-  z-index: 999;
+  z-index: 998;
   padding-top: 50px; 
   left: 0;
   top: 0;
@@ -454,4 +455,25 @@ margin-right:30%;
   display:inline-block;
   cursor:pointer;
   vertical-align:center;
+}
+
+.i18n {
+  padding:5px 10px 5px 10px;
+  font-size:14px;
+  background:lightgrey;
+  position:fixed;
+  bottom:0;
+  left:0;
+  z-index:999;
+}
+.i18n-options {
+  cursor:pointer;
+  color:grey;
+}
+.i18n-options:hover {
+  cursor:pointer;
+  color:black !important;
+}
+.i18n-selected {
+  color:black !important;
 }
